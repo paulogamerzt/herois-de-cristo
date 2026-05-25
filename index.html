@@ -46,42 +46,43 @@
   .ellen-card { border-color: #ff9800; }
 
   .player-name { font-weight: bold; font-size: 15px; margin-bottom: 8px; }
-  .player-score { font-size: 13px; color: #555; margin-bottom: 12px; }
-  
-  /* Checkbox de seleção */
-  .select-box {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    transform: scale(1.3);
-  }
+  .player-score { font-size: 13px; color: #555; }
 
-  /* Painel de envio */
-  .send-panel {
+  /* Painel de ações */
+  .action-panel {
     margin: 20px 0;
     padding: 15px;
     background: #f0f0f0;
     border-radius: 6px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  input[type="number"] {
-    width: 80px;
-    padding: 6px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
+    text-align: center;
   }
   
-  button { padding: 8px 14px; border: none; border-radius: 5px; cursor: pointer; color: white; font-size: 13px; }
-  .add { background: #4caf50; }
-  .remove { background: #f44336; }
-  .send { background: #2196f3; font-weight: bold; }
-  .report-btn { background: #607d8b; width: 100%; margin-top: 8px; }
+  button { 
+    padding: 10px 20px; 
+    border: none; 
+    border-radius: 5px; 
+    cursor: pointer; 
+    color: white; 
+    font-size: 14px; 
+    font-weight: bold;
+  }
+  .report-btn { background: #607d8b; }
+  .report-btn:hover { background: #455a64; }
 
   .report { margin-top: 25px; padding: 15px; background: #fafafa; border-radius: 5px; }
-  li { margin: 5px 0; font-size: 14px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+  th, td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+  }
+  th {
+    background: #e0e0e0;
+  }
 
   @media (max-width: 700px) {
     .players-grid { grid-template-columns: 1fr; }
@@ -96,15 +97,12 @@
   <!-- Barra de progresso superior -->
   <div class="top-bar" id="topBar"></div>
 
-  <!-- Painel de envio -->
-  <div class="send-panel">
-    <label><strong>Pontos:</strong></label>
-    <input type="number" id="pointsInput" value="10" step="5">
-    <button class="add" onclick="sendPoints(1)">Enviar +</button>
-    <button class="remove" onclick="sendPoints(-1)">Enviar -</button>
+  <!-- Painel de ações -->
+  <div class="action-panel">
+    <button class="report-btn" onclick="generateGeneralReport()">📊 Gerar Relatório Geral</button>
   </div>
 
-  <!-- Controles por jogador -->
+  <!-- Cards dos jogadores -->
   <div class="players-grid" id="playersGrid"></div>
 
   <!-- Relatório -->
@@ -114,9 +112,9 @@
 <script>
 const maxScore = 100;
 let players = [
-  { name: "Katarina Van Bora", score: 0, log: [], class: "katarina", cardClass: "katarina-card", selected: false },
-  { name: "João Huss", score: 0, log: [], class: "joao", cardClass: "joao-card", selected: false },
-  { name: "Ellen G. White", score: 0, log: [], class: "ellen", cardClass: "ellen-card", selected: false }
+  { name: "Katarina Van Bora", score: 0, class: "katarina", cardClass: "katarina-card" },
+  { name: "João Huss", score: 0, class: "joao", cardClass: "joao-card" },
+  { name: "Ellen G. White", score: 0, class: "ellen", cardClass: "ellen-card" }
 ];
 
 function render() {
@@ -135,55 +133,54 @@ function render() {
   // Cards inferiores
   const grid = document.getElementById('playersGrid');
   grid.innerHTML = '';
-  players.forEach((p, i) => {
+  players.forEach((p) => {
     grid.innerHTML += `
       <div class="player-card ${p.cardClass}">
-        <input type="checkbox" class="select-box" ${p.selected ? 'checked' : ''} onchange="toggleSelect(${i})">
         <div class="player-name">${p.name}</div>
         <div class="player-score">${p.score} / ${maxScore} pts</div>
-        <button class="report-btn" onclick="generateReport(${i})">Gerar Relatório</button>
       </div>
     `;
   });
 }
 
-function toggleSelect(index) {
-  players[index].selected = !players[index].selected;
-}
-
-function sendPoints(direction) {
-  const points = parseInt(document.getElementById('pointsInput').value) || 0;
-  const value = points * direction;
+function generateGeneralReport() {
+  const date = new Date().toLocaleString('pt-BR');
   
-  let changed = false;
-  players.forEach((p, i) => {
-    if (p.selected) {
-      p.score += value;
-      if (p.score < 0) p.score = 0;
-      if (p.score > maxScore) p.score = maxScore;
-      const action = value > 0 ? `+${value}` : `${value}`;
-      p.log.push(`${action} pts - ${new Date().toLocaleTimeString()}`);
-      changed = true;
-    }
+  let rows = '';
+  let total = 0;
+  players.forEach(p => {
+    const percent = Math.round((p.score / maxScore) * 100);
+    rows += `<tr>
+      <td>${p.name}</td>
+      <td>${p.score} pts</td>
+      <td>${percent}%</td>
+    </tr>`;
+    total += p.score;
   });
-  
-  if (!changed) {
-    alert("Selecione pelo menos um jogador!");
-    return;
-  }
-  render();
-}
-
-function generateReport(index) {
-  const p = players[index];
-  const percent = Math.round(Math.max(0, Math.min(100, (p.score / maxScore) * 100)));
 
   let html = `
-    <h3>Relatório - ${p.name}</h3>
-    <p><strong>Pontuação:</strong> ${p.score} / ${maxScore} (${percent}%)</p>
-    <p><strong>Data:</strong> ${new Date().toLocaleString('pt-BR')}</p>
-    <h4>Histórico:</h4>
-    <ul>${p.log.map(item => `<li>${item}</li>`).join('') || '<li>Sem registros</li>'}</ul>
+    <h3>Relatório Geral de Pontuação</h3>
+    <p><strong>Data:</strong> ${date}</p>
+    <p><strong>Pontuação Máxima:</strong> ${maxScore} pts</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Jogador</th>
+          <th>Pontuação</th>
+          <th>Progresso</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+      <tfoot>
+        <tr style="font-weight: bold; background: #f5f5f5;">
+          <td>Total</td>
+          <td>${total} pts</td>
+          <td>${Math.round((total / (players.length * maxScore)) * 100)}%</td>
+        </tr>
+      </tfoot>
+    </table>
   `;
 
   document.getElementById('report').innerHTML = html;
